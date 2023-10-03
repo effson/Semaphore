@@ -1,0 +1,66 @@
+semop 是一个用于操作信号量的系统调用，通常用于执行 P 操作和 V 操作，即等待和释放信号量。
+
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/sem.h>
+
+int semop(int semid, struct sembuf *sops, size_t nsops);
+参数说明：
+
+semid：信号量集的标识符，通常是通过 semget 函数创建或获取的。
+sops：指向 sembuf 结构数组的指针，sembuf 结构包含了要执行的操作。数组中的每个元素描述一个操作。
+nsops：要执行的操作的数量，通常等于 sops 数组的大小。
+
+sembuf 结构的定义如下：
+struct sembuf {
+    short sem_num;  // 信号量在信号量集中的索引，从0开始
+    short sem_op;   // 操作类型，通常为负数（P操作）或正数（V操作）
+    short sem_flg;  // 操作标志，通常为0
+};
+
+  sem_num：信号量在信号量集中的索引，从0开始，指定要操作的信号量。
+  sem_op：操作类型，通常为负数表示 P 操作（等待操作），正数表示 V 操作（释放操作）。比如，-1 表示执行 P 操作，1 表示执行 V 操作。
+  sem_flg：操作标志，通常为0，用于指定操作的附加标志，可以设置为 IPC_NOWAIT 来表示非阻塞操作。
+  semop 函数的作用是根据传递给它的 sembuf 结构数组中的操作描述，执行相应的操作。通常，这些操作是 P 操作和 V 操作，用于等待和释放信号量。
+
+
+  #include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/sem.h>
+
+int main() {
+    key_t key = ftok("/tmp/semaphore", 'A');  // 获取一个键值，通常使用 ftok 来生成
+
+    int semid = semget(key, 1, 0666 | IPC_CREAT);  // 创建或获取一个信号量集，包含一个信号量
+
+    if (semid == -1) {
+        perror("semget");
+        exit(EXIT_FAILURE);
+    }
+
+    struct sembuf sem_wait = {0, -1, 0}; // P 操作
+    struct sembuf sem_signal = {0, 1, 0}; // V 操作
+
+    // 执行 P 操作（等待信号量）
+    if (semop(semid, &sem_wait, 1) == -1) {
+        perror("semop");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("执行了 P 操作，信号量的值减一。\n");
+
+    // 执行 V 操作（释放信号量）
+    if (semop(semid, &sem_signal, 1) == -1) {
+        perror("semop");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("执行了 V 操作，信号量的值加一。\n");
+
+    // 删除信号量
+    semctl(semid, 0, IPC_RMID);
+
+    return 0;
+}
