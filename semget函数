@@ -1,0 +1,49 @@
+semget 函数是用于创建新的信号量集或获取已存在信号量集的标识符的系统调用。信号量集是一组信号量的集合，通常用于控制多个进程之间的共享资源访问。
+以下是 semget 函数的参数和用法：
+
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/sem.h>
+
+int semget(key_t key, int nsems, int semflg);
+
+参数说明：
+
+key：一个键值（key_t），通常由 ftok 函数生成。该键值用于唯一标识信号量集，不同的 key 对应不同的信号量集。
+
+nsems：要创建或获取的信号量集中信号量的数量。通常设置为大于等于1的整数。如果要创建一个新的信号量集，nsems 就是信号量集中信号量的数量；如果要
+获取一个已存在的信号量集，nsems 可以设置为0。
+
+semflg：标志位，用于指定信号量集的行为。通常使用的标志包括：
+
+IPC_CREAT：如果信号量集不存在，则创建它。
+IPC_EXCL：与 IPC_CREAT 一同使用，确保信号量集不存在，如果已存在则返回错误。
+权限标志（例如，0666）：指定信号量集的权限，用于控制哪些进程可以访问该信号量集。这些权限标志通常使用八进制表示。
+返回值：
+
+如果成功，semget 返回信号量集的标识符（非负整数），用于后续操作。
+如果失败，返回-1，并设置 errno 来指示错误类型。
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/sem.h>
+
+int main() {
+    key_t key = ftok("/tmp/semaphore", 'A');  // 获取一个键值，通常使用 ftok 来生成
+
+    int semid = semget(key, 1, 0666 | IPC_CREAT);  // 创建或获取一个信号量集，包含一个信号量
+
+    if (semid == -1) {
+        perror("semget");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("信号量集标识符：%d\n", semid);
+
+    // 在这里可以进行其他操作，如执行 P 操作和 V 操作，以及删除信号量集
+
+    return 0;
+}
